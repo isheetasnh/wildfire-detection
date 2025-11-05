@@ -1,0 +1,11 @@
+# Python virtual environments
+venv/
+.venv/
+
+# Byte-compiled Python files
+__pycache__/
+*.pyc
+
+# Operating System specific files
+.DS_Store
+Thumbs.db
