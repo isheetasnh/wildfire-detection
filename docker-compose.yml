@@ -1,6 +1,7 @@
+version: '3.8'
 services:
   zookeeper:
-    image: bitnamilegacy/zookeeper:3.8  # <--- This is the fix
+    image: bitnamilegacy/zookeeper:3.8
     container_name: zookeeper
     ports:
       - "2181:2181"
@@ -9,37 +10,56 @@ services:
       - ALLOW_ANONYMOUS_LOGIN=yes
 
   kafka:
-    image: bitnamilegacy/kafka:3.7    # <--- This is the fix
-    container_name: kafka
+    image: bitnamilegacy/kafka:3.7
+    container_name: kafka  # <-- Added for a stable name
     ports:
-      - "9092:9092"
-    depends_on:
-      - zookeeper
+      - "9092:9092" # For your Mac (Python)
     environment:
+      # --- Zookeeper Connection ---
       - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
-      - KAFKA_CFG_LISTENERS=PLAINTEXT_INTERNAL://:29092,PLAINTEXT_HOST://:9092
-      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT_INTERNAL://kafka:29092,PLAINTEXT_HOST://localhost:9092
-      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT_INTERNAL:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-      - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=PLAINTEXT_INTERNAL
-      - KAFKA_CFG_CREATE_TOPICS=wildfire-events:1:1
       - ALLOW_PLAINTEXT_LISTENER=yes
 
+      # --- Combined Network Configuration ---
+      - KAFKA_CFG_LISTENERS=INTERNAL://:29092,EXTERNAL://:9092
+      - KAFKA_CFG_ADVERTISED_LISTENERS=INTERNAL://kafka:29092,EXTERNAL://localhost:9092
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+      - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=INTERNAL
+    depends_on:
+      - zookeeper
+
   flink-jobmanager:
-    image: flink:1.16.0-scala_2.12
+    # 'build: .' tells docker-compose to build the Dockerfile
+    # in the current directory ('.')
+    build: .
+    image: custom-flink-py:latest # Give our new image a name
     container_name: flink-jobmanager
-    platform: linux/arm64
     ports:
       - "8081:8081"
+    depends_on:
+      - kafka
     command: jobmanager
     environment:
-      - JOB_MANAGER_RPC_ADDRESS=flink-jobmanager
+      - |
+        FLINK_PROPERTIES=
+        jobmanager.rpc.address: flink-jobmanager
+    volumes:
+      # We still need to mount our job file and connector
+      - ./flink-sql-connector-kafka-3.0.2-1.18.jar:/opt/flink/lib/flink-sql-connector-kafka-3.0.2-1.18.jar
+      - ./flink_job.py:/opt/flink/flink_job.py
+      # We DO NOT need to mount startup.sh anymore
 
   flink-taskmanager:
-    image: flink:1.16.0-scala_2.12
+    # Use the same custom image we just built
+    image: custom-flink-py:latest
     container_name: flink-taskmanager
-    platform: linux/arm64
+    command: taskmanager
     depends_on:
       - flink-jobmanager
-    command: taskmanager
     environment:
-      - JOB_MANAGER_RPC_ADDRESS=flink-jobmanager
+      - |
+        FLINK_PROPERTIES=
+        jobmanager.rpc.address: flink-jobmanager
+        taskmanager.numberOfTaskSlots: 2
+    volumes:
+      # We still need the connector here too
+      - ./flink-sql-connector-kafka-3.0.2-1.18.jar:/opt/flink/lib/flink-sql-connector-kafka-3.0.2-1.18.jar
