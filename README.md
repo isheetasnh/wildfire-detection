@@ -33,6 +33,10 @@ It consists of three main components:
 You will need **three separate terminals** for this.
 
 **Terminal 1: Start Services**
+First build
+```
+docker-compose up -d --build
+```
 Start the Kafka, Zookeeper, and Flink containers using Docker.
 ```bash
 docker-compose up -d
@@ -43,6 +47,10 @@ Verify: You can check if Flink is running by visiting its dashboard at http://lo
 When you are finished, stop and remove all the Docker containers:
 ```
 docker-compose down
+```
+3. Command to run the flink job
+```
+   docker exec -u root flink-jobmanager flink run -py /opt/flink/flink_job.py
 ```
 Folder Structure
 data/read_data.py: Initial experiments for reading FDCF and MCMIPC files.
