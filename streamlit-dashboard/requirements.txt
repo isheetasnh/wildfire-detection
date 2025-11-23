@@ -1,0 +1,9 @@
+streamlit
+pandas
+pyflink
+matplotlib
+seaborn
+plotly
+numpy
+requests
+PyQt6

@@ -11,8 +11,8 @@ def run_flink_job():
     # 2. !!! IMPORTANT !!! Update this path to where you downloaded the JAR
     # This path must be an absolute path and start with 'file://'
     # Example: 'file:///Users/yourname/project/flink-sql-connector-kafka-3.0.2-1.18.jar'
-    #jar_path = "file:///Users/shivania/Documents/UMass/Sem3/CS_532/Wildfire_Detection_Project/wildfire-detection/flink-sql-connector-kafka-3.0.2-1.18.jar"
-    #t_env.get_config().set("pipeline.jars", jar_path)
+    jar_path = "file:///home/srbagchi/Projects/CS532-DataSciSys/wildfire-detection/flink-sql-connector-kafka-3.0.2-1.18.jar"
+    t_env.get_config().set("pipeline.jars", jar_path)
 
     # 3. Define the Kafka Source Table (reading from Kafka)
     # This SQL matches the 'wildfire-events' topic and the JSON format from Step 1
