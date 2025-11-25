@@ -26,6 +26,11 @@ RUN apt-get clean && \
     mkdir -p ${FLINK_OPT_DIR} && \
     wget -O "${FLINK_OPT_DIR}/${FLINK_PYTHON_JAR}" "${JAR_URL}" && \
     \
+    # Download the Kafka SQL connector JAR
+    KAFKA_JAR="flink-sql-connector-kafka-3.0.2-1.18.jar" && \
+    wget -O "/opt/flink/lib/${KAFKA_JAR}" \
+      "https://repo.maven.apache.org/maven2/org/apache/flink/flink-sql-connector-kafka/3.0.2-1.18/flink-sql-connector-kafka-3.0.2-1.18.jar" && \
+    \
     # Clean up apt cache
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*

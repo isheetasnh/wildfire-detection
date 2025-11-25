@@ -45,7 +45,22 @@ docker-compose up -d
 
 3. Verify: You can check if Flink is running by visiting its dashboard at http://localhost:8081
 
-4. Shutting Down
+4. Start the streaming API/test wildfire data to Kafka. This will start printing events it is sending to Kafka in the terminal, which is contnious loop.
+```bash
+wildfire-detection % python producer.py
+```
+
+5. Submit a Flink job. You can verify that the job is successfully runnning in dashboard http://localhost:8081, under "Running Jobs" tab. You can submit multiple jobs. Note, code changes to file flink_job.py will not be reflected in the submitted jobs. While the new submitted job after the code change will reflect that changes, it is recommended restart the docker and subit a new job, so the outputs of the two jobs are not confused. 
+```bash
+wildfire-detection % docker exec -it flink-jobmanager /opt/flink/bin/flink run -py /opt/flink/flink_job.py
+```
+
+6. You see the logs the of the task manager, where the output of Flink job (processed data) is outputted.
+```bash
+wildfire-detection % docker logs -f flink-taskmanager
+```
+
+7. Shutting Down
 When you are finished, stop and remove all the Docker containers:
 ```
 docker-compose down

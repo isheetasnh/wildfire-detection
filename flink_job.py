@@ -11,8 +11,9 @@ def run_flink_job():
     # 2. !!! IMPORTANT !!! Update this path to where you downloaded the JAR
     # This path must be an absolute path and start with 'file://'
     # Example: 'file:///Users/yourname/project/flink-sql-connector-kafka-3.0.2-1.18.jar'
-    jar_path = "file:///home/srbagchi/Projects/CS532-DataSciSys/wildfire-detection/flink-sql-connector-kafka-3.0.2-1.18.jar"
-    t_env.get_config().set("pipeline.jars", jar_path)
+    # Don't ned this anymore as we set it in the Dockerfile.
+    # jar_path = "file:////Users/isheeta.sinha/Documents/uni/cs532/project/wildfire-detection/flink-sql-connector-kafka-3.0.2-1.18.jar"
+    # t_env.get_config().set("pipeline.jars", jar_path)
 
     # 3. Define the Kafka Source Table (reading from Kafka)
     # This SQL matches the 'wildfire-events' topic and the JSON format from Step 1
@@ -46,9 +47,10 @@ def run_flink_job():
     """)
 
     # 5. Create and execute the processing logic
-    # This simple query finds fires with a max temperature over 400 K
+    # This simple query finds fires with a max temperature over 2000 K
+    # 2000k is set based on empirical observations from the S3 bucket.
     table = t_env.from_path("kafka_source")
-    high_temp_fires = table.where(table.max_temp_k > 400)
+    high_temp_fires = table.where(table.max_temp_k > 2000)
 
     # Send the results of the query to the print_sink
     high_temp_fires.execute_insert("print_sink").wait()
