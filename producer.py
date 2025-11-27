@@ -27,7 +27,7 @@ def get_mock_wildfire_events():
         yield {
             "total_pixels": random.randint(1, 100),
             "min_temp_k": random.uniform(300, 350),
-            "max_temp_k": random.uniform(200, 500),
+            "max_temp_k": random.uniform(200, 5000),
             "mean_temp_k": random.uniform(320, 420),
         }
 

@@ -1,18 +1,13 @@
-import requests
 import pandas as pd
 import numpy as np
+import json
+from kafka import KafkaConsumer
+from kafka.errors import NoBrokersAvailable
 
-FLINK_JOB_URL = "http://localhost:8081/jobs"  # Update with your Flink job URL
-
-# Fetch data from Flink job
+# --- ORIGINAL GIT FUNCTION (For Charts & Metrics) ---
+# This ensures your main dashboard looks exactly like the Git version
 def get_flink_data() -> pd.DataFrame:
-    # response = requests.get(FLINK_JOB_URL)
-    # if response.status_code == 200:
-    #     data = response.json()
-    #     return pd.DataFrame(data['results'])  # Adjust based on actual response structure
-    # else:
-    #     raise Exception(f"Failed to fetch data from Flink job: {response.status_code}")
-    # Placeholder implementation using static, synthetic data
+    # Synthetic data generation (from original repo)
     rng = np.random.default_rng(42)
     timestamps = pd.date_range(start="2024-01-01 00:00", end="2024-06-01 00:00", periods=300).strftime("%Y-%m-%d %H:%M")
     temperature = rng.normal(loc=300, scale=50, size=300).round(2)
@@ -24,7 +19,31 @@ def get_flink_data() -> pd.DataFrame:
     }
     return pd.DataFrame(data)
 
-# Placeholder for data streaming functionality
-# Currently not implemented
-def stream_data() -> str:
-    return "Streaming data from Flink job is not yet implemented."
+# --- NEW FUNCTION (For Dynamic Table) ---
+# This fetches the REAL critical fires (> 2000 K) from Flink
+def get_kafka_data() -> pd.DataFrame:
+    topic_name = "processed-wildfire-events"
+    try:
+        consumer = KafkaConsumer(
+            topic_name,
+            bootstrap_servers='localhost:9092',
+            auto_offset_reset='earliest',
+            value_deserializer=lambda x: json.loads(x.decode('utf-8')),
+            consumer_timeout_ms=1000
+        )
+        messages = []
+        for _ in range(500):
+            try:
+                msg = next(consumer)
+                event = msg.value
+                # Add timestamp if missing
+                if 'timestamp' not in event:
+                    event['timestamp'] = pd.Timestamp.now().strftime("%Y-%m-%d %H:%M:%S")
+                messages.append(event)
+            except StopIteration:
+                break
+        consumer.close()
+        return pd.DataFrame(messages) if messages else pd.DataFrame()
+    except Exception as e:
+        print(f"Kafka Error: {e}")
+        return pd.DataFrame()

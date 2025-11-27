@@ -1,22 +1,12 @@
 import os
 from pyflink.datastream import StreamExecutionEnvironment
-from pyflink.table import StreamTableEnvironment, DataTypes
-from pyflink.table.schema import Schema
+from pyflink.table import StreamTableEnvironment
 
 def run_flink_job():
-    # 1. Set up the streaming environment
     env = StreamExecutionEnvironment.get_execution_environment()
     t_env = StreamTableEnvironment.create(env)
 
-    # 2. !!! IMPORTANT !!! Update this path to where you downloaded the JAR
-    # This path must be an absolute path and start with 'file://'
-    # Example: 'file:///Users/yourname/project/flink-sql-connector-kafka-3.0.2-1.18.jar'
-    # Don't ned this anymore as we set it in the Dockerfile.
-    # jar_path = "file:////Users/isheeta.sinha/Documents/uni/cs532/project/wildfire-detection/flink-sql-connector-kafka-3.0.2-1.18.jar"
-    # t_env.get_config().set("pipeline.jars", jar_path)
-
-    # 3. Define the Kafka Source Table (reading from Kafka)
-    # This SQL matches the 'wildfire-events' topic and the JSON format from Step 1
+    # 1. Source: Read from 'wildfire-events'
     t_env.execute_sql("""
         CREATE TABLE kafka_source (
             `total_pixels` INT,
@@ -33,27 +23,28 @@ def run_flink_job():
         )
     """)
 
-    # 4. Define a Sink (e.g., printing to the console)
-    # This just prints the data Flink receives.
+    # 2. Sink: Write to 'processed-wildfire-events'
+    # We use the same Kafka broker (kafka:29092) because Flink is inside Docker
     t_env.execute_sql("""
-        CREATE TABLE print_sink (
+        CREATE TABLE kafka_sink (
             `total_pixels` INT,
             `min_temp_k` DOUBLE,
             `max_temp_k` DOUBLE,
             `mean_temp_k` DOUBLE
         ) WITH (
-            'connector' = 'print'
+            'connector' = 'kafka',
+            'topic' = 'processed-wildfire-events',
+            'properties.bootstrap.servers' = 'kafka:29092',
+            'format' = 'json'
         )
     """)
 
-    # 5. Create and execute the processing logic
-    # This simple query finds fires with a max temperature over 2000 K
-    # 2000k is set based on empirical observations from the S3 bucket.
+    # 3. Logic: Filter for high temp fires 
     table = t_env.from_path("kafka_source")
     high_temp_fires = table.where(table.max_temp_k > 2000)
 
-    # Send the results of the query to the print_sink
-    high_temp_fires.execute_insert("print_sink").wait()
+    # 4. Execute: Insert into Sink
+    high_temp_fires.execute_insert("kafka_sink").wait()
 
 if __name__ == "__main__":
     run_flink_job()
