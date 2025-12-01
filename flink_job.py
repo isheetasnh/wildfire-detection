@@ -9,6 +9,7 @@ def run_flink_job():
     # 1. Source: Read from 'wildfire-events'
     t_env.execute_sql("""
         CREATE TABLE kafka_source (
+            `s3_timestamp` DOUBLE,
             `total_pixels` INT,
             `min_temp_k` DOUBLE,
             `max_temp_k` DOUBLE,
@@ -27,10 +28,12 @@ def run_flink_job():
     # We use the same Kafka broker (kafka:29092) because Flink is inside Docker
     t_env.execute_sql("""
         CREATE TABLE kafka_sink (
+            `s3_timestamp` DOUBLE,
             `total_pixels` INT,
             `min_temp_k` DOUBLE,
             `max_temp_k` DOUBLE,
-            `mean_temp_k` DOUBLE
+            `mean_temp_k` DOUBLE,
+            `end_to_end_delay_seconds` BIGINT
         ) WITH (
             'connector' = 'kafka',
             'topic' = 'processed-wildfire-events',
@@ -39,12 +42,24 @@ def run_flink_job():
         )
     """)
 
-    # 3. Logic: Filter for high temp fires 
-    table = t_env.from_path("kafka_source")
-    high_temp_fires = table.where(table.max_temp_k > 2000)
+    insert_stmt = """
+        INSERT INTO kafka_sink
+        SELECT
+            s3_timestamp,
+            total_pixels,
+            min_temp_k,
+            max_temp_k,
+            mean_temp_k,
+            CAST(
+                UNIX_TIMESTAMP() - CAST(s3_timestamp AS BIGINT)
+                AS BIGINT
+            ) AS end_to_end_delay_seconds
+        FROM kafka_source
+        WHERE max_temp_k > 1000
+    """
 
-    # 4. Execute: Insert into Sink
-    high_temp_fires.execute_insert("kafka_sink").wait()
+
+    t_env.execute_sql(insert_stmt).wait()
 
 if __name__ == "__main__":
     run_flink_job()

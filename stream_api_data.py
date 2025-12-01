@@ -17,6 +17,7 @@ def read_fdcf_data(ds):
     mean_fire_temp = ds['mean_fire_temperature'].values
 
     data = {
+        "s3_timestamp": time.time(),
         "total_pixels": int(total_fire_pixels),
         "min_temp_k": float(min_fire_temp),
         "max_temp_k": float(max_fire_temp),
