@@ -64,7 +64,7 @@ streamlit-dashboard/
 Requires specifications for the dashboard, as discussed in the project proposal and milestone goals:
 
 - Provide an interactive interface
-- Display historical wildfire events and summaries
+- Display historical wildfire events and summary statistics
 - Display spatial statistics
 - Visualize geospatial wildfire maps
 - Display real-time updates

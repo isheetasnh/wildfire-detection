@@ -30,13 +30,12 @@ It consists of three main components:
 
 You will need **three separate terminals** for this.
 
-**Terminal 1: Start Services**
 1. The first time you run the simulation, build the Docker images:
 ```
 docker-compose up -d --build
 ```
 
-Note: If you downloaded docker-compose on Linux with sudo apt-get, you may need to run the above command with `sudo`.
+Note: If you downloaded docker-compose on Linux with sudo apt-get, you may need to run the docker commands with `sudo`.
 
 2. Start the Kafka, Zookeeper, and Flink containers using Docker.
 ```bash

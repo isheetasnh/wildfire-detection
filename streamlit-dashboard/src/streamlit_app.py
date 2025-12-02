@@ -1,16 +1,22 @@
 import streamlit as st
 import pandas as pd
-from services.flink_client import get_flink_data, get_kafka_data
+from services.flink_client import get_synthetic_data, get_kafka_data
 from metrics.compute_metrics import (
     calculate_average_temperature, 
     calculate_median_temperature, 
     count_high_temp_events, 
     calculate_number_of_events
 )
-from components.charts import plot_temperature_distribution, plot_fire_events
+from components.charts import (
+    plot_temperature_distributions, 
+    plot_temperature_scatter, 
+    plot_fire_events, 
+    plot_temperatures_box_whiskers, 
+    plot_temperatures_over_time
+)
 from components.controls import create_temperature_slider, create_timestamp_slider
 
-HIGH_TEMP_THRESHOLD = 400
+HIGH_TEMP_THRESHOLD = 2000
 
 def main():
     st.set_page_config(page_title="Wildfire Dashboard", layout="wide")
@@ -23,13 +29,13 @@ def main():
     # PART 1: ORIGINAL VISUALIZATIONS (Git Style)
     # ==========================================
     # This uses the synthetic data to preserve the "Demo" look
-    data = get_flink_data()
+    data = get_kafka_data()
 
     if data is not None:
         df = pd.DataFrame(data)
 
         # --- Metrics ---
-        st.header("Metrics (Simulation)")
+        st.header("Summary Statistics")
         avg_temp = calculate_average_temperature(df)
         median_temp = calculate_median_temperature(df)
         high_temp_count = count_high_temp_events(df, threshold=HIGH_TEMP_THRESHOLD)
@@ -38,20 +44,23 @@ def main():
         col1, col2, col3, col4 = st.columns(4)
         col1.metric("Average Temperature (K)", avg_temp)
         col2.metric("Median Temperature (K)", median_temp)
-        col3.metric("High Temp Events (> 400 K)", high_temp_count)
+        col3.metric(f"High Temp Events (> {HIGH_TEMP_THRESHOLD} K)", high_temp_count)
         col4.metric("Number of Events", num_events)
         
         # --- Filters ---
         st.sidebar.header("Filters")
-        min_temp, max_temp = create_temperature_slider(df)
-        min_timestamp, max_timestamp = create_timestamp_slider(df)
+        temp_col, min_temp, max_temp = create_temperature_slider(df)
+        time_col, min_timestamp, max_timestamp = create_timestamp_slider(df)
 
-        filtered_data = df[(df['mean_temp_k'] >= min_temp) & (df['mean_temp_k'] <= max_temp) &
-                           (pd.to_datetime(df['timestamp']).between(pd.to_datetime(min_timestamp), pd.to_datetime(max_timestamp)))]
+        filtered_data = df[(df[temp_col] >= min_temp) & (df[temp_col] <= max_temp) &
+                           (pd.to_datetime(df[time_col], unit='s').between(pd.to_datetime(min_timestamp), pd.to_datetime(max_timestamp)))]
 
         # --- Charts ---
-        st.header("Visualizations")
-        plot_temperature_distribution(filtered_data)
+        st.header("📊 Visualizations")
+        plot_temperatures_over_time(filtered_data)
+        plot_temperature_distributions(filtered_data)
+        plot_temperature_scatter(filtered_data)
+        plot_temperatures_box_whiskers(filtered_data, threshold=HIGH_TEMP_THRESHOLD)
         plot_fire_events(filtered_data)
 
     else:
@@ -68,7 +77,7 @@ def main():
 
     if not live_data.empty:
         # Sort by newest first
-        live_data = live_data.sort_values(by="timestamp", ascending=False)
+        live_data = live_data.sort_values(by="s3_timestamp", ascending=False)
         
         st.dataframe(
             live_data,
