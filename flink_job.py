@@ -13,7 +13,9 @@ def run_flink_job():
             `total_pixels` INT,
             `min_temp_k` DOUBLE,
             `max_temp_k` DOUBLE,
-            `mean_temp_k` DOUBLE
+            `mean_temp_k` DOUBLE,
+            `latitude` DOUBLE,
+            `longitude` DOUBLE
         ) WITH (
             'connector' = 'kafka',
             'topic' = 'wildfire-events',
@@ -33,6 +35,8 @@ def run_flink_job():
             `min_temp_k` DOUBLE,
             `max_temp_k` DOUBLE,
             `mean_temp_k` DOUBLE,
+            `latitude` DOUBLE,
+            `longitude` DOUBLE,
             `end_to_end_delay_seconds` BIGINT
         ) WITH (
             'connector' = 'kafka',
@@ -50,6 +54,8 @@ def run_flink_job():
             min_temp_k,
             max_temp_k,
             mean_temp_k,
+            latitude,
+            longitude,
             CAST(
                 UNIX_TIMESTAMP() - CAST(s3_timestamp AS BIGINT)
                 AS BIGINT

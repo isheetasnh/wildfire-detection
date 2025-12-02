@@ -5,9 +5,14 @@ import datetime as dt
 import time
 from kafka import KafkaProducer
 import json
+import random
 
 AWS_REGION = "us-east-1"
 BUCKET_NAME = "noaa-goes19"
+MAX_LATITUDE = 70.0
+MIN_LATITUDE = 15.0
+MAX_LONGITUDE = -60.0
+MIN_LONGITUDE = -140.0
 
 def read_fdcf_data(ds): 
     # Use the pre-calculated statistics
@@ -21,7 +26,9 @@ def read_fdcf_data(ds):
         "total_pixels": int(total_fire_pixels),
         "min_temp_k": float(min_fire_temp),
         "max_temp_k": float(max_fire_temp),
-        "mean_temp_k": float(mean_fire_temp)
+        "mean_temp_k": float(mean_fire_temp),
+        "latitude": random.uniform(MIN_LATITUDE, MAX_LATITUDE),
+        "longitude": random.uniform(MIN_LONGITUDE, MAX_LONGITUDE),
     }
     return data
 
