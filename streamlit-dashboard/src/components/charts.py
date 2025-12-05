@@ -38,10 +38,10 @@ def plot_temperature_scatter(data: pd.DataFrame) -> None:
 
 def plot_temperatures_box_whiskers(data: pd.DataFrame, threshold=None) -> None:
     fig, ax = plt.subplots(figsize=(8, 6))
-    sns.boxplot(data=data[['min_temp_k', 'mean_temp_k', 'max_temp_k']], ax=ax)
+    sns.boxplot(data=data[[ 'mean_temp_k', 'max_temp_k']], ax=ax)
     ax.set_title('Box and Whisker Plot of Temperatures')
     ax.set_ylabel('Temperature (K)')
-    ax.set_xticklabels(['Min Temp (K)', 'Mean Temp (K)', 'Max Temp (K)'])
+    ax.set_xticklabels([ 'Mean Temp (K)', 'Max Temp (K)'])
     st.pyplot(fig)
     plt.close(fig)
 
@@ -49,8 +49,7 @@ def plot_temperatures_over_time(data: pd.DataFrame) -> None:
     fig, ax = plt.subplots(figsize=(12, 6))
     data['s3_timestamp'] = pd.to_datetime(data['s3_timestamp'], unit='s')
     sns.lineplot(x='s3_timestamp', y='mean_temp_k', data=data, ax=ax, label='Mean Temp (K)')
-    sns.lineplot(x='s3_timestamp', y='max_temp_k', data=data, ax=ax, label='Max Temp (K)')
-    sns.lineplot(x='s3_timestamp', y='min_temp_k', data=data, ax=ax, label='Min Temp (K)')
+    sns.lineplot(x='s3_timestamp', y='max_temp_k', data=data, ax=ax, label='Max Temp (K)') 
     ax.set_title('Temperature Over Time')
     ax.set_xlabel('Timestamp')
     ax.set_ylabel('Temperature (K)')
