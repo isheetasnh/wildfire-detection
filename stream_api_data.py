@@ -20,15 +20,23 @@ def read_fdcf_data(ds):
     min_fire_temp = ds['minimum_fire_temperature'].values
     max_fire_temp = ds['maximum_fire_temperature'].values
     mean_fire_temp = ds['mean_fire_temperature'].values
-
+    box_west = {"lat_min": 32.0, "lat_max": 48.0, "lon_min": -124.0, "lon_max": -110.0}
+    box_central = {"lat_min": 26.0, "lat_max": 49.0, "lon_min": -110.0, "lon_max": -90.0}
+    box_east = {"lat_min": 25.0, "lat_max": 45.0, "lon_min": -90.0, "lon_max": -75.0}
+    
+    # Randomly select one region
+    region = random.choice([box_west, box_central, box_east])
+    
+    latitude = random.uniform(region["lat_min"], region["lat_max"])
+    longitude = random.uniform(region["lon_min"], region["lon_max"])
     data = {
         "s3_timestamp": time.time(),
         "total_pixels": int(total_fire_pixels),
         "min_temp_k": float(min_fire_temp),
         "max_temp_k": float(max_fire_temp),
         "mean_temp_k": float(mean_fire_temp),
-        "latitude": random.uniform(MIN_LATITUDE, MAX_LATITUDE),
-        "longitude": random.uniform(MIN_LONGITUDE, MAX_LONGITUDE),
+        "latitude": latitude,
+        "longitude": longitude,
     }
     return data
 

@@ -32,6 +32,8 @@ def run_flink_job():
             `window_end` TIMESTAMP(3),
             `grid_latitude` DOUBLE,
             `grid_longitude` DOUBLE,
+            `sum_pixels` BIGINT,   -- NEW COLUMN
+            `min_temp_k` DOUBLE,   -- (From previous fix)
             `max_temp_k` DOUBLE,
             `avg_temp_k` DOUBLE,
             `event_count` BIGINT,
@@ -44,7 +46,8 @@ def run_flink_job():
             'format' = 'json'
         )
     """)
- 
+
+    # 2. Update Insert Statement: Calculate SUM(total_pixels)
     insert_stmt = """
         INSERT INTO kafka_sink
         SELECT
@@ -52,6 +55,8 @@ def run_flink_job():
             window_end,
             ROUND(latitude, 1) as grid_latitude,
             ROUND(longitude, 1) as grid_longitude,
+            SUM(total_pixels) as sum_pixels,  -- AGGREGATE ACTUAL PIXELS
+            MIN(min_temp_k) as min_temp_k,
             MAX(max_temp_k) as max_temp_k,
             AVG(mean_temp_k) as avg_temp_k,
             COUNT(*) as event_count,

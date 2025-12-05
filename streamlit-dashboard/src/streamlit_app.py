@@ -17,6 +17,7 @@ from components.charts import (
 from components.controls import create_temperature_slider, create_timestamp_slider
 
 HIGH_TEMP_THRESHOLD = 2000
+
 def main():
     st.set_page_config(page_title="Wildfire Dashboard", layout="wide")
     st.title("Wildfire Detection Dashboard")
@@ -25,34 +26,48 @@ def main():
         st.rerun()
 
     # ==========================================
-    # PART 1: ORIGINAL VISUALIZATIONS
+    # PART 1: VISUALIZATIONS & METRICS
     # ==========================================
+    # Fetch data from Kafka (ensure services/flink_client.py has group_id configured!)
     data = get_kafka_data()
 
     if data is not None and not data.empty:
         df = pd.DataFrame(data)
 
-        # --- FIX: ADAPT NEW FLINK DATA TO OLD CHARTS ---
+        # --- DATA ADAPTATION LAYER ---
+        # This block adapts the raw Flink output keys to the names expected by the charts.
+        
         if 'avg_temp_k' in df.columns:
+            # 1. Determine the source for "Total Pixels"
+            # If Flink is sending 'sum_pixels' (New Job), use it.
+            # If not, fall back to 'event_count' (Old Job), though this is less accurate for the Scatter Plot.
+            if 'sum_pixels' in df.columns:
+                pixel_source = 'sum_pixels'
+            else:
+                pixel_source = 'event_count'
+
+            # 2. Rename columns to match Chart components
             df = df.rename(columns={
                 'avg_temp_k': 'mean_temp_k',      # Map Avg -> Mean
-                'event_count': 'total_pixels',    # Map Count -> Total Pixels
+                pixel_source: 'total_pixels',     # Map Sum/Count -> Total Pixels
                 'window_start': 's3_timestamp'    # Map Window Start -> Timestamp
             })
             
-            # 1. Fix Timestamp (String -> Number)
+            # 3. Fix Timestamp format (String -> Unix Timestamp for charts)
             try:
+                # Convert string timestamp to integer seconds
                 df['s3_timestamp'] = pd.to_datetime(df['s3_timestamp']).astype('int64') // 10**9
             except Exception as e:
                 pass # Already numeric or failed
             
-            # 2. Fix Missing 'min_temp_k' (CRITICAL FIX)
-            # The new job doesn't calculate Min, so we use Mean as a placeholder
+            # 4. Handle 'min_temp_k'
+            # If Flink is sending 'min_temp_k', this block is skipped (Correct Behavior).
+            # If Flink is NOT sending it (Old Job), we fallback to Mean to prevent crashes.
             if 'min_temp_k' not in df.columns:
                 df['min_temp_k'] = df['mean_temp_k']
         # -----------------------------------------------
 
-        # --- Metrics ---
+        # --- Metrics Section ---
         st.header("Summary Statistics")
         avg_temp = calculate_average_temperature(df)
         median_temp = calculate_median_temperature(df)
@@ -65,34 +80,46 @@ def main():
         col3.metric(f"High Temp Events (> {HIGH_TEMP_THRESHOLD} K)", high_temp_count)
         col4.metric("Number of Events", num_events)
         
-        # --- Filters ---
+        # --- Filters Section ---
         st.sidebar.header("Filters")
         temp_col, min_temp, max_temp = create_temperature_slider(df)
         time_col, min_timestamp, max_timestamp = create_timestamp_slider(df)
 
         if time_col in df.columns and temp_col in df.columns:
+            # Apply filters
             filtered_data = df[(df[temp_col] >= min_temp) & (df[temp_col] <= max_temp) &
                                (pd.to_datetime(df[time_col], unit='s').between(pd.to_datetime(min_timestamp), pd.to_datetime(max_timestamp)))]
 
-            # --- Charts ---
+            # --- Charts Section ---
             st.header("📊 Visualizations")
+            
+            # 1. Temperature Trends (Now shows real Min Temp if available)
             plot_temperatures_over_time(filtered_data)
+            
+            # 2. Distributions
             plot_temperature_distributions(filtered_data)
+            
+            # 3. Scatter Plot (Now accurately maps Total Pixels vs Temp)
             plot_temperature_scatter(filtered_data)
+            
+            # 4. Box Plot (Now shows real Min Temp distribution)
             plot_temperatures_box_whiskers(filtered_data, threshold=HIGH_TEMP_THRESHOLD)
+            
+            # 5. Fire Size Histogram
             plot_fire_events(filtered_data)
         else:
             st.warning("Data loaded, but columns for filtering are missing.")
 
     else:
-        st.error("No data available. (Is the Flink job running?)")
+        st.error("No data available. (Is the Flink job running and is the Consumer Group ID set?)")
 
     # ==========================================
-    # PART 2: NEW ADVANCED MONITORING
+    # PART 2: LIVE HEATMAP & MONITORING
     # ==========================================
     st.divider()
     st.subheader("Live Wildfire Heatmap & Aggregates")
     
+    # We fetch fresh data again for the "Live" view
     live_data = get_kafka_data()
     
     if not live_data.empty and 'grid_latitude' in live_data.columns:
